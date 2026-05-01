@@ -4,6 +4,9 @@ import asyncio
 import logging
 from typing import Dict, List
 
+from analytics import analyze_results, format_analytics
+from cache import ArticleCache
+from database import ArticleStore
 from llm_providers import LLMProviders
 from news_api import NewsAPIClient
 
@@ -13,9 +16,11 @@ logger = logging.getLogger(__name__)
 class NewsSummarizer:
     """Fetch, summarize, analyze, and report on news articles."""
 
-    def __init__(self):
+    def __init__(self, cache: ArticleCache = None, store: ArticleStore = None):
         self.news_client = NewsAPIClient()
         self.llm_providers = LLMProviders()
+        self.cache = cache or ArticleCache()
+        self.store = store or ArticleStore()
 
     @staticmethod
     def _article_text(article: Dict) -> str:
@@ -28,6 +33,12 @@ Content: {article.get("content", "")[:500]}"""
         """Summarize one article and analyze sentiment."""
         title = article.get("title", "Untitled")
         logger.info("Processing article: %s", title[:80])
+
+        cached_result = self.cache.get(article)
+        if cached_result:
+            logger.info("Using cached result for article: %s", title[:80])
+            self.store.save_result(article, cached_result)
+            return cached_result
 
         article_text = self._article_text(article)
         summary_prompt = f"""Summarize this news article in 2-3 sentences:
@@ -65,7 +76,7 @@ Be concise."""
             sentiment = fallback["response"]
             sentiment_provider = fallback["provider"]
 
-        return {
+        result = {
             "title": title,
             "source": article.get("source", "Unknown"),
             "url": article.get("url", ""),
@@ -74,7 +85,11 @@ Be concise."""
             "summary_provider": summary_result["provider"],
             "sentiment": sentiment,
             "sentiment_provider": sentiment_provider,
+            "cache_hit": False,
         }
+        self.cache.set(article, result)
+        self.store.save_result(article, result)
+        return result
 
     def process_articles(self, articles: List[Dict]) -> List[Dict]:
         """Process multiple articles sequentially."""
@@ -115,6 +130,7 @@ Be concise."""
             print(f"   URL: {result['url']}")
             print(f"   Summary provider: {result['summary_provider']}")
             print(f"   Sentiment provider: {result['sentiment_provider']}")
+            print(f"   Cache: {'hit' if result.get('cache_hit') else 'miss'}")
             print("\n   SUMMARY:")
             print(f"   {result['summary']}")
             print("\n   SENTIMENT:")
@@ -134,6 +150,13 @@ Be concise."""
         print(f"  Input: {cost_summary['total_input_tokens']:,}")
         print(f"  Output: {cost_summary['total_output_tokens']:,}")
         print(f"Average cost per request: ${cost_summary['average_cost']:.6f}")
+        print("=" * 80)
+
+        analytics = analyze_results(results)
+        print("\n" + "=" * 80)
+        print("ADVANCED ANALYTICS")
+        print("=" * 80)
+        print(format_analytics(analytics))
         print("=" * 80)
 
 

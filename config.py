@@ -37,6 +37,20 @@ class Config:
     ANTHROPIC_RPM = int(os.getenv("ANTHROPIC_RPM", "50"))
     NEWS_API_RPM = int(os.getenv("NEWS_API_RPM", "100"))
 
+    # Email reports
+    EMAIL_HOST = os.getenv("EMAIL_HOST")
+    EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+    EMAIL_USERNAME = os.getenv("EMAIL_USERNAME")
+    EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
+    EMAIL_FROM = os.getenv("EMAIL_FROM")
+    EMAIL_TO = os.getenv("EMAIL_TO")
+
+    # Scheduler
+    SCHEDULE_INTERVAL_MINUTES = int(os.getenv("SCHEDULE_INTERVAL_MINUTES", "1440"))
+    SCHEDULE_CATEGORY = os.getenv("SCHEDULE_CATEGORY", "technology")
+    SCHEDULE_ARTICLE_COUNT = int(os.getenv("SCHEDULE_ARTICLE_COUNT", "3"))
+    SEND_EMAIL_REPORT = os.getenv("SEND_EMAIL_REPORT", "false").lower() == "true"
+
     @classmethod
     def validate(cls):
         """Validate required configuration."""

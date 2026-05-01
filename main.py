@@ -5,6 +5,7 @@ import logging
 import sys
 
 from config import Config
+from email_reporter import send_email_report
 from summarizer import AsyncNewsSummarizer, NewsSummarizer
 
 logging.basicConfig(
@@ -55,6 +56,11 @@ def main():
             results = summarizer.process_articles(articles)
 
         summarizer.generate_report(results)
+        send_email = input("Send email report? (y/n): ").strip().lower() == "y"
+        if send_email:
+            send_email_report(results)
+            print("Email report sent.")
+
         print("\nProcessing complete.")
 
     except KeyboardInterrupt:
